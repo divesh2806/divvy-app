@@ -3,6 +3,7 @@ import axios from 'axios';
 import { AuthContext } from '../context/TempAuth'; 
 import { useNavigate } from 'react-router-dom';
 import ExpenseForm from './ExpenseForm';
+import PersonalExpenseManager from './PersonalExpenseManager';
 import { 
   IndianRupee, Users, Trash2, Plus, 
   LogOut, ArrowLeft, LayoutDashboard, UserPlus, CheckCircle2,
@@ -28,7 +29,8 @@ function Dashboard() {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [settledItems, setSettledItems] = useState([]); 
   const [newGroupName, setNewGroupName] = useState('');
-  const [newGroupMembers, setNewGroupMembers] = useState('');
+  const [newGroupMembers, setNewGroupMembers] = useState([]);
+  const [memberInput, setMemberInput] = useState('');
   const [memberEmailToAdd, setMemberEmailToAdd] = useState('');
   const [friendEmailToAdd, setFriendEmailToAdd] = useState(''); 
 
@@ -93,8 +95,8 @@ function Dashboard() {
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/groups/add', { name: newGroupName, members: newGroupMembers }, { headers: { 'x-auth-token': localStorage.getItem('token') } });
-      setShowGroupModal(false); setNewGroupName(''); setNewGroupMembers(''); fetchData(); 
+      await axios.post('http://localhost:5000/api/groups/add', { name: newGroupName, members: newGroupMembers.join(',') }, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+      setShowGroupModal(false); setNewGroupName(''); setNewGroupMembers([]); setMemberInput(''); fetchData(); 
     } catch (err) { alert("Error creating group"); }
   };
   const handleAddFriend = async (e) => {
@@ -151,11 +153,19 @@ function Dashboard() {
               onClick={() => { setActiveTab('friends'); setSelectedGroup(null); setSelectedFriend(null); }}
               className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'friends' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
             > Friends </button>
+            <button 
+              onClick={() => { setActiveTab('personal'); setSelectedGroup(null); setSelectedFriend(null); }}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'personal' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+            > Wallet </button>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 space-y-6 custom-scrollbar">
-          {activeTab === 'groups' ? (
+          {activeTab === 'personal' ? (
+            <div className="px-2 mt-4 text-center">
+              <p className="text-xs font-medium text-slate-500">Your personal finances are private and manage their own ledger.</p>
+            </div>
+          ) : activeTab === 'groups' ? (
             <div>
               <div className="flex items-center justify-between mb-2 px-2">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Your Groups</span>
@@ -202,7 +212,9 @@ function Dashboard() {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 overflow-y-auto p-8 lg:p-12">
-        {!selectedGroup && !selectedFriend ? (
+        {activeTab === 'personal' ? (
+          <PersonalExpenseManager />
+        ) : !selectedGroup && !selectedFriend ? (
           <div className="max-w-4xl mx-auto mt-10">
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Dashboard</h1>
             <p className="text-slate-500 mb-8">Welcome back, {user?.name}. Here's where you stand.</p>
@@ -351,7 +363,46 @@ function Dashboard() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1">Members (Emails)</label>
-                <input className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" placeholder="jane@example.com, john@example.com" value={newGroupMembers} onChange={e => setNewGroupMembers(e.target.value)} required />
+                <div className="flex gap-2">
+                  <input 
+                    type="email"
+                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm" 
+                    placeholder="member@example.com" 
+                    value={memberInput} 
+                    onChange={e => setMemberInput(e.target.value)} 
+                    onKeyDown={e => {
+                       if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (memberInput && !newGroupMembers.includes(memberInput)) {
+                             setNewGroupMembers([...newGroupMembers, memberInput]);
+                             setMemberInput('');
+                          }
+                       }
+                    }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      if (memberInput && !newGroupMembers.includes(memberInput)) {
+                         setNewGroupMembers([...newGroupMembers, memberInput]);
+                         setMemberInput('');
+                      }
+                    }}
+                    className="px-3 py-2 bg-slate-100 border border-slate-300 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                {newGroupMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg min-h-[40px]">
+                    {newGroupMembers.map((email, idx) => (
+                      <span key={idx} className="flex items-center gap-1.5 bg-white border border-slate-300 text-xs text-slate-600 px-2 py-1 rounded-md shadow-sm">
+                        {email}
+                        <button type="button" onClick={() => setNewGroupMembers(newGroupMembers.filter(m => m !== email))} className="text-slate-400 hover:text-rose-500"><Trash2 size={12}/></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowGroupModal(false)} className="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Cancel</button>

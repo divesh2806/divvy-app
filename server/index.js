@@ -15,6 +15,7 @@ app.use('/api/expenses', expenseRoute);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/friends', require('./routes/friends'));
+app.use('/api/personal', require('./routes/personalExpenses'));
 
 mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/divvy')
     .then(() => console.log("MongoDB Connected"))
